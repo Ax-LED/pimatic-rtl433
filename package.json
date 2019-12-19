@@ -1,0 +1,41 @@
+{
+  "name": "pimatic-rtl433",
+  "description": "Plugin for rtl433",
+  "author": {
+    "name": "AxLED",
+    "email": ""
+  },
+  "main": "rtl433.coffee",
+  "files": [
+    "CMakeLists.txt",
+    "rtl433.coffee",
+    "README.md",
+    "device-config-schema.coffee",
+    "rtl433-config-schema.coffee"
+  ],
+  "version": "1.0.3",
+  "configSchema": "rtl433-config-schema.coffee",
+  "dependencies": {
+    "cmake-js": "3.4.1"
+  },
+  "peerDependencies": {
+    "pimatic": ">=0.8.0 <1.0.0"
+  },
+  "scripts": {
+    "preinstall": "rm -rf bin && rm -rf tmp && git clone https://github.com/merbanan/rtl_433.git tmp/rtl_433",
+    "//install": "cmake-js compile",
+    "install": "cd tmp/rtl_433/ && mkdir build && cd build/ && cmake ../ && make && sudo make install",
+    "//postinstall": "mkdir bin && cp build/tmp/rtl_433/src/rtl_433 ./bin && rm -rf build && rm -rf tmp",
+    "postinstall": "mkdir bin && cp tmp/rtl_433/build/src/rtl_433 ./bin && rm -rf build && rm -rf tmp"
+  },
+  "homepage": "https://github.com/Ax-LED/pimatic-rtl433",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ax-LED/pimatic-rtl433.git"
+  },
+  "engines": {
+    "node": ">0.8.x",
+    "npm": ">1.1.x"
+  }
+}
