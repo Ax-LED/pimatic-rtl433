@@ -1,8 +1,8 @@
 module.exports = (env) ->
   Promise = env.require 'bluebird'
   #AxLED
-  #assert = env.require 'cassert'
-  #_ = env.require('lodash')
+  assert = env.require 'cassert'
+  _ = env.require('lodash')
   #AxLED
   M = env.matcher
   events = env.require 'events'
@@ -17,9 +17,9 @@ module.exports = (env) ->
       @framework = framework
       env.logger.debug("Launching rtl_433")
       #env.logger.debug "#{__dirname}/bin/rtl_433", "-f #{@config.freq} -R 36 -F csv -q -l #{@config.detectionLevel}"
-      env.logger.debug "#{__dirname}/bin/rtl_433", "-f #{@config.freq} -R 03 -R 19 -R 52 -F csv -l #{@config.detectionLevel}"
+      env.logger.debug "#{__dirname}/bin/rtl_433", "-f #{@config.freq} -R 03 -R 19 -R 52 -R 141 -F csv -l #{@config.detectionLevel}"
       #proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, '-R', '36', '-F', 'csv', '-q', '-l', @config.detectionLevel])
-      proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, '-R', '03', '-R', '19', '-R', '52', '-F', 'csv', '-l', @config.detectionLevel])
+      proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, '-R', '03', '-R', '19', '-R', '52', '-R', '141', '-F', 'csv', '-l', @config.detectionLevel])
       #proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, '-R 03 -R 19 -R 52', '-F', 'csv', '-l', @config.detectionLevel])
       #proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, ['-R 03 -R 19 -R 52'], '-F', 'csv', '-l', @config.detectionLevel])
       proc.stdout.setEncoding('utf8')
@@ -57,7 +57,7 @@ module.exports = (env) ->
         @emit('power', result)
       ###
       #AxLED
-      if datas.length == 14
+      if datas.length == 15
         result = {}
         result = {
             "model": datas[3],
@@ -68,6 +68,7 @@ module.exports = (env) ->
             "temperatureC": parseFloat(datas[9]),
             "humidity": parseInt(datas[10]),
             "temperatureF": parseFloat(datas[12])
+            #"temperatureF": (parseFloat(datas[12])-32)*5/9 #Umrechnung in Grad
         }
         env.logger.debug "Got measure (model:" + result.model + ", sensorId: " + result.sensorId + ", channel: " + result.channel + ", battery:" + result.battery + ", TempC:" + result.temperatureC + ", Humidity:" + result.humidity + ", TempF:" + result.temperatureF + ")"
         @emit('temp', result)
@@ -106,7 +107,18 @@ module.exports = (env) ->
         type: "number"
         unit: '%'
         acronym: 'RH'
-        
+      lowBattery:
+        description: "the battery status"
+        type: "boolean"
+        labels: ["low", 'ok']
+        #labels: ["low", 'OK']
+        icon:
+          noText: true
+          mapping: {
+            'icon-battery-filled': false
+            'icon-battery-empty': true
+          }
+
     constructor: (@config, lastState, @rtl433) ->
       @id = @config.id
       @name = @config.name
@@ -114,13 +126,27 @@ module.exports = (env) ->
       @_humidity = lastState?.humidity?.value
       @_lowBattery = lastState?.lowBattery?.value
       @_battery = lastState?.battery?.value
+      isFahrenheit = @config.isFahrenheit
+
+      ###if isFahrenheit then tempUnit = '°F' 
+      else tempUnit = '°C'
+      @attributes.temperature = {
+        description: "the measured temperature"
+        type: "number"
+        unit: tempUnit
+        acronym: 'T'
+      }###
 
       #AxLED
       @rtl433.on("temp", (result) =>
         if result.sensorId is @config.sensorId
           env.logger.debug "Tempsensor <- " , result
           #AxLED
-          @_temperature = result.temperatureC
+          if isFahrenheit
+            #@_temperature = result.temperatureF
+            @_temperature = (result.temperatureF-32)*5/9 #Umrechnung in Grad
+          else
+            @_temperature = result.temperatureC
           #@_temperature = result.humidity
           @emit "temperature", @_temperature
           @_humidity = result.humidity
