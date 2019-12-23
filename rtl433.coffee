@@ -1,5 +1,9 @@
 module.exports = (env) ->
   Promise = env.require 'bluebird'
+  #AxLED
+  #assert = env.require 'cassert'
+  #_ = env.require('lodash')
+  #AxLED
   M = env.matcher
   events = env.require 'events'
   exec = Promise.promisify(require("child_process").exec)
@@ -16,6 +20,8 @@ module.exports = (env) ->
       env.logger.debug "#{__dirname}/bin/rtl_433", "-f #{@config.freq} -R 03 -R 19 -R 52 -F csv -l #{@config.detectionLevel}"
       #proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, '-R', '36', '-F', 'csv', '-q', '-l', @config.detectionLevel])
       proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, '-R', '03', '-R', '19', '-R', '52', '-F', 'csv', '-l', @config.detectionLevel])
+      #proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, '-R 03 -R 19 -R 52', '-F', 'csv', '-l', @config.detectionLevel])
+      #proc = spawn("#{__dirname}/bin/rtl_433",['-f', @config.freq, ['-R 03 -R 19 -R 52'], '-F', 'csv', '-l', @config.detectionLevel])
       proc.stdout.setEncoding('utf8')
       proc.stderr.setEncoding('utf8')
       rl = readline.createInterface({ input: proc.stdout })
@@ -39,6 +45,7 @@ module.exports = (env) ->
       env.logger.debug data
       datas = {};
       datas = data.split(",")
+      ###
       if datas.length == 7
         result = {}
         result = {
@@ -48,6 +55,23 @@ module.exports = (env) ->
         }
         env.logger.debug "Got measure (id:" + result.sensorId + ", amps: " + result.ampere + ", battery:" + result.battery + ")"
         @emit('power', result)
+      ###
+      #AxLED
+      if datas.length == 14
+        result = {}
+        result = {
+            "model": datas[3],
+            "sensorId": datas[5],
+            "channel": datas[7],
+            "battery": datas[8],
+            #"humidity": parseFloat(datas[10]),
+            "temperatureC": parseFloat(datas[9]),
+            "humidity": parseInt(datas[10]),
+            "temperatureF": parseFloat(datas[12])
+        }
+        env.logger.debug "Got measure (model:" + result.model + ", sensorId: " + result.sensorId + ", channel: " + result.channel + ", battery:" + result.battery + ", TempC:" + result.temperatureC + ", Humidity:" + result.humidity + ", TempF:" + result.temperatureF + ")"
+        @emit('temp', result)
+      #AxLED
 
   Promise.promisifyAll(rtl433.prototype)
 
@@ -59,62 +83,65 @@ module.exports = (env) ->
 
       deviceConfigDef = require("./device-config-schema")
 
-      @framework.deviceManager.registerDeviceClass("EfergyE2Sensor", {
-        configDef: deviceConfigDef.EfergyE2Sensor, 
-        createCallback: (config, lastState) => return new EfergyE2Sensor(config, lastState, @rtl433)
+      #AxLED
+      @framework.deviceManager.registerDeviceClass("RTL433Temperature", {
+        configDef: deviceConfigDef.RTL433Temperature, 
+        createCallback: (config, lastState) => return new RTL433Temperature(config, lastState, @rtl433)
       })
+      #AxLED
 
   plugin = new EfergyE2()
   
-  class EfergyE2Sensor extends env.devices.Sensor
-
-    constructor: (@config, lastState, @rtl433) ->
-      @name = @config.name
-      @id = @config.id
-      @sensorId = @config.sensorId
-      @_voltage = parseFloat(@config.volt)
-
-      @_ampere = lastState?.ampere?.value
-      @_watt = lastState?.watt?.value
-      @_lowBattery = lastState?.lowBattery?.value
-
-      @attributes = {}
-
-      @attributes.watt = {
-        description: "the messured Wattage"
+  #AxLED
+  class RTL433Temperature extends env.devices.TemperatureSensor
+  
+    attributes:
+      temperature:
+        description: "the measured temperature"
         type: "number"
-        unit: 'W'
-        acronym: 'Power'
-      }
-      
-      @attributes.lowBattery = {
-        description: "Battery status"
-        type: "boolean"
-        labels: ["low", 'ok']
-        icon:
-          noText: true
-          mapping: {
-            'icon-battery-filled': false
-            'icon-battery-empty': true
-          }
-      }
+        unit: '°C'
+        acronym: 'T'
+      humidity:
+        description: "the measured humidity"
+        type: "number"
+        unit: '%'
+        acronym: 'RH'
+        
+    constructor: (@config, lastState, @rtl433) ->
+      @id = @config.id
+      @name = @config.name
+      @_temperature = lastState?.temperature?.value
+      @_humidity = lastState?.humidity?.value
+      @_lowBattery = lastState?.lowBattery?.value
+      @_battery = lastState?.battery?.value
 
-
-      @rtl433.on("power", (result) =>
+      #AxLED
+      @rtl433.on("temp", (result) =>
         if result.sensorId is @config.sensorId
-          env.logger.debug "power <- " , result
-          @_ampere = result.ampere
-          @emit "ampere", @_ampere
-          @_watt = @_voltage*@_ampere
-          @emit "watt", @_watt
+          env.logger.debug "Tempsensor <- " , result
+          #AxLED
+          @_temperature = result.temperatureC
+          #@_temperature = result.humidity
+          @emit "temperature", @_temperature
+          @_humidity = result.humidity
+          @emit "humidity", @_humidity
+          @_battery = result.battery
+          @emit "battery", @_battery
+          #AxLEd
           @_lowBattery = result.battery
           @emit "lowBattery", @_lowBattery
       )
       super()
-      
-    getWatt: -> Promise.resolve @_watt
-    getBattery: -> Promise.resolve @_batterystat
-    getAmpere: -> Promise.resolve @_ampere
+      #AxLED
+    
+    #getHumidity: -> Promise.resolve(10)
+    getTemperature: -> Promise.resolve @_temperature
+    #getTemperature: -> Promise.resolve(11)
+    getHumidity: -> Promise.resolve @_humidity
     getLowBattery: -> Promise.resolve @_lowBattery
+    getBattery: -> Promise.resolve @_battery
+
+    destroy: ->
+      super()
 
   return plugin
