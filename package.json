@@ -1,6 +1,6 @@
 {
   "name": "pimatic-rtl433",
-  "description": "Plugin for rtl433",
+  "description": "Plugin for pimatic using results of rtl433",
   "author": {
     "name": "AxLED",
     "email": ""
@@ -13,7 +13,7 @@
     "device-config-schema.coffee",
     "rtl433-config-schema.coffee"
   ],
-  "version": "1.0.3",
+  "version": "1.0.0",
   "configSchema": "rtl433-config-schema.coffee",
   "dependencies": {
     "cmake-js": "3.4.1"

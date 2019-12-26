@@ -1,22 +1,33 @@
-fork of pimatic-efergy-e2
+pimatic-rtl433
 =======================
 
-Pimatic plugin to gather power consumption from Efergy E2 (and other clone devices including Chacon EcoWatt)
-using a RTL-SDR compatible dongle.
+Pimatic plugin to display datas from temperature and humidity sensors using a RTL-SDR compatible dongle.
 This plugin use the rtl_433 executable (https://github.com/merbanan/rtl_433)
 
-Dependencies
+Installation
 ------------
+Install dependencies (See [rtl_433 readme](https://github.com/merbanan/rtl_433/blob/master/README.md) for more details.):
 
-Compiling rtl_433 requires [rtl-sdr](http://sdr.osmocom.org/trac/wiki/rtl-sdr) to be installed.
+    sudo apt-get install cmake libtool libusb-1.0.0-dev librtlsdr-dev rtl-sdr
 
-Depending on your system, you may also need to install the following libraries:
+Change to your pimatic node_modules folder:
 
-    sudo apt-get install libtool libusb-1.0.0-dev librtlsdr-dev rtl-sdr
+    cd /home/pi/pimatic-app/node_modules
 
-See [rtl_433 readme](https://github.com/merbanan/rtl_433/blob/master/README.md) for more details.
+Clone the repository:
+
+    git clone https://github.com/Ax-LED/pimatic-rtl433.git
+
+Change into plugin folder:
+
+    cd pimatic-rtl433
+
+Install Plugin:
+
+    npm install
 
 Thanks
 ------
 
 Thanks to merbanan and the rtl_433 community for their support and to maintain that very nice tool.
+Thanks to David Pirlot, his plugin [pimatic-efergy-e2](https://github.com/DavidBel86/pimatic-efergy-e2/) was base of this plugin.

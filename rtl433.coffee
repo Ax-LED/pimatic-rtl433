@@ -45,38 +45,23 @@ module.exports = (env) ->
       env.logger.debug data
       datas = {};
       datas = data.split(",")
-      ###
-      if datas.length == 7
-        result = {}
-        result = {
-            "sensorId": datas[2],
-            "ampere": parseFloat datas[3],
-            "battery": datas[5]=="LOW"
-        }
-        env.logger.debug "Got measure (id:" + result.sensorId + ", amps: " + result.ampere + ", battery:" + result.battery + ")"
-        @emit('power', result)
-      ###
-      #AxLED
-      if datas.length == 15
+      if datas.length == 15 #Data Length variiert, abhängig von den RTL_433 Parametern
         result = {}
         result = {
             "model": datas[3],
             "sensorId": datas[5],
             "channel": datas[7],
-            "battery": datas[8],
-            #"humidity": parseFloat(datas[10]),
+            "lowbattery": datas[8],
             "temperatureC": parseFloat(datas[9]),
             "humidity": parseInt(datas[10]),
             "temperatureF": parseFloat(datas[12])
-            #"temperatureF": (parseFloat(datas[12])-32)*5/9 #Umrechnung in Grad
         }
-        env.logger.debug "Got measure (model:" + result.model + ", sensorId: " + result.sensorId + ", channel: " + result.channel + ", battery:" + result.battery + ", TempC:" + result.temperatureC + ", Humidity:" + result.humidity + ", TempF:" + result.temperatureF + ")"
+        env.logger.debug "Got measure (model:" + result.model + ", sensorId: " + result.sensorId + ", channel: " + result.channel + ", lowbattery:" + result.lowbattery + ", TempC:" + result.temperatureC + ", Humidity:" + result.humidity + ", TempF:" + result.temperatureF + ")"
         @emit('temp', result)
-      #AxLED
 
   Promise.promisifyAll(rtl433.prototype)
 
-  class EfergyE2 extends env.plugins.Plugin
+  class Rtl433 extends env.plugins.Plugin
 
     init: (app, @framework, @config) =>
 
@@ -84,16 +69,13 @@ module.exports = (env) ->
 
       deviceConfigDef = require("./device-config-schema")
 
-      #AxLED
       @framework.deviceManager.registerDeviceClass("RTL433Temperature", {
         configDef: deviceConfigDef.RTL433Temperature, 
         createCallback: (config, lastState) => return new RTL433Temperature(config, lastState, @rtl433)
       })
-      #AxLED
 
-  plugin = new EfergyE2()
+  plugin = new Rtl433()
   
-  #AxLED
   class RTL433Temperature extends env.devices.TemperatureSensor
   
     attributes:
@@ -111,7 +93,6 @@ module.exports = (env) ->
         description: "the battery status"
         type: "boolean"
         labels: ["low", 'ok']
-        #labels: ["low", 'OK']
         icon:
           noText: true
           mapping: {
@@ -125,47 +106,30 @@ module.exports = (env) ->
       @_temperature = lastState?.temperature?.value
       @_humidity = lastState?.humidity?.value
       @_lowBattery = lastState?.lowBattery?.value
-      @_battery = lastState?.battery?.value
       isFahrenheit = @config.isFahrenheit
 
-      ###if isFahrenheit then tempUnit = '°F' 
-      else tempUnit = '°C'
-      @attributes.temperature = {
-        description: "the measured temperature"
-        type: "number"
-        unit: tempUnit
-        acronym: 'T'
-      }###
-
-      #AxLED
       @rtl433.on("temp", (result) =>
         if result.sensorId is @config.sensorId
           env.logger.debug "Tempsensor <- " , result
-          #AxLED
           if isFahrenheit
-            #@_temperature = result.temperatureF
             @_temperature = (result.temperatureF-32)*5/9 #Umrechnung in Grad
           else
             @_temperature = result.temperatureC
-          #@_temperature = result.humidity
           @emit "temperature", @_temperature
           @_humidity = result.humidity
           @emit "humidity", @_humidity
-          @_battery = result.battery
-          @emit "battery", @_battery
-          #AxLEd
-          @_lowBattery = result.battery
+          if result.lowbattery == 'OK' # Werte von OK in boolean true/false umwandeln
+            @_lowBattery = false
+          else
+            @_lowBattery = true
           @emit "lowBattery", @_lowBattery
+          
       )
       super()
-      #AxLED
     
-    #getHumidity: -> Promise.resolve(10)
     getTemperature: -> Promise.resolve @_temperature
-    #getTemperature: -> Promise.resolve(11)
     getHumidity: -> Promise.resolve @_humidity
     getLowBattery: -> Promise.resolve @_lowBattery
-    getBattery: -> Promise.resolve @_battery
 
     destroy: ->
       super()

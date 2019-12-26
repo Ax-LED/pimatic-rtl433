@@ -10,12 +10,12 @@ module.exports = {
       description: "Carrier frequency (in Hz)"
       type: "number"
       default: 433920000
-    parameter:
+    ###parameter:
       description: "parameter for rtl_433, see commandline rtl_433 -h"
       type: "string"
-      default: "-R 03 -R 19 -R 52"
+      default: "-R 03 -R 19 -R 52"###
     detectionLevel:
       description: "Detection level used to determine pulses [0-16384]"
       type: "number"
-      default: 8000
+      default: 0
 }
